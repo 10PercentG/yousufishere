@@ -2,26 +2,33 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Yousuf CV Fireworks (Vercel)</title>
+  <title>Yousuf Real-Time via SSE</title>
   <style>
-    body,html { margin:0; padding:0; overflow:hidden; background:#000; display:flex; flex-direction:column; align-items:center; }
-    #banner { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-      font-family:sans-serif; font-size:5vw; color:#ff0;
+    body,html { margin:0; padding:0; overflow:hidden; background:#000; font-family:sans-serif }
+    #banner {
+      position:fixed; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      font-size:5vw; color:#ff0;
       text-shadow:0 0 10px #f00,0 0 20px #f00;
       opacity:0; transition:opacity .3s; z-index:10;
     }
     #banner.visible { opacity:1; }
-    #cam { margin-top:20px; width:400px; border:2px solid #fff; border-radius:4px; }
-    #fire { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
-    #controls { margin:10px; }
-    #captureBtn { padding:10px 20px; font-size:1rem; cursor:pointer; }
-    #debug {
+    #cam {
       position:fixed; bottom:10px; left:10px;
-      background:rgba(0,0,0,0.6); color:#0f0;
-      font-family:monospace; font-size:0.9rem; padding:4px 8px; border-radius:4px; z-index:20;
+      width:200px; border:2px solid #fff; z-index:5;
+    }
+    #controls {
+      position:fixed; bottom:10px; right:10px; z-index:5;
+    }
+    #captureBtn {
+      padding:8px 16px; font-size:1rem; cursor:pointer;
+    }
+    #debug {
+      position:fixed; bottom:10px; left:220px;
+      color:#0f0; font-family:monospace; z-index:5;
     }
     .emoji {
-      position:fixed; top:0; font-size:1.5rem; pointer-events:none; z-index:9;
+      position:fixed; top:0; pointer-events:none; font-size:1.5rem; z-index:9;
       animation: fall 3s linear forwards;
     }
     @keyframes fall {
@@ -47,19 +54,32 @@
     const fw     = new Fireworks.default(document.getElementById('fire'));
     const btn    = document.getElementById('captureBtn');
 
-    function rainSad(count = 5) {
-      for (let i = 0; i < count; i++) {
+    // SSE subscription
+    const evtSrc = new EventSource('/events');
+    evtSrc.addEventListener('yousufHere', () => {
+      banner.classList.add('visible');
+      fw.start();
+      setTimeout(() => {
+        fw.stop();
+        banner.classList.remove('visible');
+      }, 3000);
+    });
+
+    // rain sad emojis
+    function rainSad(n=5) {
+      for (let i = 0; i < n; i++) {
         const e = document.createElement('div');
         e.textContent = '😢';
-        e.className   = 'emoji';
-        e.style.left  = Math.random() * 100 + 'vw';
+        e.className = 'emoji';
+        e.style.left = Math.random() * 100 + 'vw';
         document.body.append(e);
         setTimeout(() => e.remove(), 3000);
       }
     }
 
+    // capture & classify
     async function captureAndClassify() {
-      if (video.readyState < 2) return alert('Camera not ready');
+      if (video.readyState < 2) { alert('Cam not ready'); return; }
       const c = document.createElement('canvas');
       c.width  = video.videoWidth;
       c.height = video.videoHeight;
@@ -68,31 +88,35 @@
 
       debug.textContent = 'Processing…';
       try {
-        const res = await fetch('/api/classify', {
-          method: 'POST',
-          headers: { 'Content-Type':'application/json' },
+        const res = await fetch('/classify', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json' },
           body: JSON.stringify({ imageBase64: img })
         });
         const data = await res.json();
-        console.log('API response:', data);
-        debug.textContent = `tag: ${data.tag}  prob: ${(data.probability*100).toFixed(1)}%`;
+        console.log(data);
+        debug.textContent = `tag:${data.tag} prob:${(data.probability*100).toFixed(1)}%`;
 
         if (data.tag === 'Yousuf' && data.probability > 0.7) {
+          // local display + SSE broadcast will have been sent
           banner.classList.add('visible');
           fw.start();
-          setTimeout(() => { fw.stop(); banner.classList.remove('visible'); }, 3000);
+          setTimeout(() => {
+            fw.stop();
+            banner.classList.remove('visible');
+          }, 3000);
         } else {
           rainSad(5);
         }
       } catch (e) {
-        console.warn(e);
-        debug.textContent = 'Error: ' + e;
+        console.error(e);
+        debug.textContent = 'Error';
       }
     }
 
     navigator.mediaDevices.getUserMedia({ video:true })
-      .then(stream => video.srcObject = stream)
-      .catch(e => console.error('Camera error', e));
+      .then(s => video.srcObject = s)
+      .catch(e => console.error('Cam error', e));
 
     btn.addEventListener('click', captureAndClassify);
   </script>
