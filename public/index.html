@@ -4,51 +4,41 @@
   <meta charset="utf-8">
   <title>Yousuf Real-Time</title>
   <style>
-    body,html { margin:0; padding:0; background:#000; overflow:hidden; font-family:sans-serif; }
-    #banner {
-      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-      font-size:5vw; color:#ff0; text-shadow:0 0 10px #f00,0 0 20px #f00;
-      opacity:0; transition:opacity .3s; z-index:10;
-    }
-    #banner.visible { opacity:1; }
-    #cam { position:fixed; bottom:10px; left:10px; width:200px; border:2px solid #fff; z-index:5; }
-    #controls { position:fixed; bottom:10px; right:10px; z-index:5; }
-    #captureBtn { padding:8px 16px; font-size:1rem; cursor:pointer; }
-    #debug { position:fixed; bottom:10px; left:220px; color:#0f0; font-family:monospace; z-index:5; }
-    #fire { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
-    .emoji {
-      position:fixed; top:0; font-size:1.5rem; pointer-events:none; z-index:9;
-      animation: fall 3s linear forwards;
-    }
-    @keyframes fall {
-      0% { transform:translateY(-2em); opacity:1; }
-      100% { transform:translateY(100vh); opacity:0; }
-    }
+    body,html{margin:0;padding:0;background:#000;overflow:hidden;font-family:sans-serif}
+    #banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+      font-size:5vw;color:#ff0;text-shadow:0 0 10px #f00,0 0 20px #f00;
+      opacity:0;transition:opacity .3s;z-index:10}
+    #banner.visible{opacity:1}
+    #cam{position:fixed;bottom:10px;left:10px;width:200px;border:2px solid #fff;z-index:5}
+    #controls{position:fixed;bottom:10px;right:10px;z-index:5}
+    #captureBtn{padding:8px 16px;font-size:1rem;cursor:pointer}
+    #debug{position:fixed;bottom:10px;left:220px;color:#0f0;font-family:monospace;z-index:5}
+    #fire{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1}
+    .emoji{position:fixed;top:0;font-size:1.5rem;pointer-events:none;z-index:9;
+      animation:fall 3s linear forwards}
+    @keyframes fall{0%{transform:translateY(-2em);opacity:1}100%{transform:translateY(100vh);opacity:0}}
   </style>
 </head>
 <body>
   <div id="banner">YOUSUF IS HERE</div>
   <canvas id="fire"></canvas>
   <video id="cam" autoplay muted playsinline></video>
-
-  <div id="controls">
-    <button id="captureBtn">Capture & Check</button>
-  </div>
+  <div id="controls"><button id="captureBtn">Capture & Check</button></div>
   <div id="debug">Awaiting capture…</div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
   <script src="https://unpkg.com/fireworks-js@2.1.0/dist/index.umd.js"></script>
   <script>
-    const video = document.getElementById('cam');
-    const banner = document.getElementById('banner');
-    const debug = document.getElementById('debug');
-    const fw = new Fireworks.default(document.getElementById('fire'));
-    const btn = document.getElementById('captureBtn');
+    const video = document.getElementById('cam'),
+          banner = document.getElementById('banner'),
+          debug  = document.getElementById('debug'),
+          fw     = new Fireworks.default(document.getElementById('fire')),
+          btn    = document.getElementById('captureBtn');
 
     function rainSad(n=5){
       for(let i=0;i<n;i++){
         const e=document.createElement('div');
-        e.textContent='😢'; e.className='emoji';
+        e.textContent='😢';e.className='emoji';
         e.style.left=Math.random()*100+'vw';
         document.body.append(e);
         setTimeout(()=>e.remove(),3000);
@@ -56,55 +46,47 @@
     }
 
     // SignalR client
-    fetch('/api/negotiate', { method:'POST' })
+    fetch('/api/negotiate',{method:'POST'})
       .then(r=>r.json())
       .then(cfg=>{
-        const conn = new signalR.HubConnectionBuilder()
-          .withUrl(cfg.url, { accessTokenFactory: ()=>cfg.accessToken })
+        const conn=new signalR.HubConnectionBuilder()
+          .withUrl(cfg.url,{ accessTokenFactory:()=>cfg.accessToken })
           .build();
-        conn.on('yousufHere', ()=>{
+        conn.on('yousufHere',()=>{
           banner.classList.add('visible');
           fw.start();
-          setTimeout(()=>{ fw.stop(); banner.classList.remove('visible'); },3000);
+          setTimeout(()=>{fw.stop();banner.classList.remove('visible')},3000);
         });
         conn.start().catch(console.error);
       }).catch(console.error);
 
     async function captureAndClassify(){
-      if(video.readyState < 2){ alert('Camera not ready'); return; }
+      if(video.readyState<2){alert('Camera not ready');return;}
       const c=document.createElement('canvas');
-      c.width=video.videoWidth; c.height=video.videoHeight;
+      c.width=video.videoWidth;c.height=video.videoHeight;
       c.getContext('2d').drawImage(video,0,0);
       const img=c.toDataURL('image/jpeg');
-
       debug.textContent='Processing…';
       try {
-        const res = await fetch('/api/classify',{
-          method:'POST',
+        const res=await fetch('/api/classify',{method:'POST',
           headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ imageBase64: img })
+          body:JSON.stringify({imageBase64:img})
         });
-        if(!res.ok){ debug.textContent=`Error ${res.status}`; return; }
-        const { tag, probability } = await res.json();
+        if(!res.ok){debug.textContent=`Error ${res.status}`;return;}
+        const {tag,probability}=await res.json();
         debug.textContent=`tag:${tag} prob:${(probability*100).toFixed(1)}%`;
-        if(tag==='Yousuf' && probability>0.7){
-          banner.classList.add('visible');
-          fw.start();
-          setTimeout(()=>{ fw.stop(); banner.classList.remove('visible'); },3000);
-        } else {
-          rainSad(5);
-        }
-      } catch(e){
-        console.error(e);
-        debug.textContent='Error';
-      }
+        if(tag==='Yousuf'&&probability>0.7){
+          banner.classList.add('visible');fw.start();
+          setTimeout(()=>{fw.stop();banner.classList.remove('visible')},3000);
+        } else rainSad(5);
+      } catch(e){console.error(e);debug.textContent='Error';}
     }
 
     navigator.mediaDevices.getUserMedia({video:true})
       .then(s=>video.srcObject=s)
-      .catch(e=>{ console.error(e); debug.textContent='Cam error'; });
+      .catch(e=>{console.error(e);debug.textContent='Cam error';});
 
-    btn.addEventListener('click', captureAndClassify);
+    btn.addEventListener('click',captureAndClassify);
   </script>
 </body>
 </html>
