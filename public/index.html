@@ -5,24 +5,21 @@
   <title>Yousuf CV Fireworks (Vercel)</title>
   <style>
     body,html { margin:0; padding:0; overflow:hidden; background:#000; display:flex; flex-direction:column; align-items:center; }
-    #banner {
-      position:fixed; top:50%; left:50%;
-      transform:translate(-50%,-50%);
+    #banner { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
       font-family:sans-serif; font-size:5vw; color:#ff0;
       text-shadow:0 0 10px #f00,0 0 20px #f00;
       opacity:0; transition:opacity .3s; z-index:10;
     }
     #banner.visible { opacity:1; }
-    #cam {
-      margin-top:20px;
-      width:400px; border:2px solid #fff; border-radius:4px;
-    }
-    #fire {
-      position:fixed; top:0; left:0; width:100%; height:100%;
-      pointer-events:none; z-index:1;
-    }
+    #cam { margin-top:20px; width:400px; border:2px solid #fff; border-radius:4px; }
+    #fire { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
     #controls { margin:10px; }
     #captureBtn { padding:10px 20px; font-size:1rem; cursor:pointer; }
+    #debug {
+      position:fixed; bottom:10px; left:10px;
+      background:rgba(0,0,0,0.6); color:#0f0;
+      font-family:monospace; font-size:0.9rem; padding:4px 8px; border-radius:4px; z-index:20;
+    }
     .emoji {
       position:fixed; top:0; font-size:1.5rem; pointer-events:none; z-index:9;
       animation: fall 3s linear forwards;
@@ -30,10 +27,6 @@
     @keyframes fall {
       0% { transform: translateY(-2em); opacity:1; }
       100% { transform: translateY(100vh); opacity:0; }
-    }
-    #debug {
-      position:fixed; bottom:10px; left:10px; padding:4px 8px;
-      background:rgba(0,0,0,0.6); color:#0f0; font-family:monospace; font-size:0.9rem; border-radius:4px; z-index:20;
     }
   </style>
 </head>
@@ -48,7 +41,7 @@
 
   <script src="https://unpkg.com/fireworks-js@2.1.0/dist/index.umd.js"></script>
   <script>
-    const video = document.getElementById('cam');
+    const video  = document.getElementById('cam');
     const banner = document.getElementById('banner');
     const debug  = document.getElementById('debug');
     const fw     = new Fireworks.default(document.getElementById('fire'));
@@ -77,7 +70,7 @@
       try {
         const res = await fetch('/api/classify', {
           method: 'POST',
-          headers:{ 'Content-Type':'application/json' },
+          headers: { 'Content-Type':'application/json' },
           body: JSON.stringify({ imageBase64: img })
         });
         const data = await res.json();
@@ -87,10 +80,7 @@
         if (data.tag === 'Yousuf' && data.probability > 0.7) {
           banner.classList.add('visible');
           fw.start();
-          setTimeout(() => {
-            fw.stop();
-            banner.classList.remove('visible');
-          }, 3000);
+          setTimeout(() => { fw.stop(); banner.classList.remove('visible'); }, 3000);
         } else {
           rainSad(5);
         }

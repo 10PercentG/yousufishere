@@ -1,17 +1,17 @@
 // api/classify.js
-const fs = require('fs');
+const fs   = require('fs');
 const path = require('path');
 
 // dynamic import for ESM-only node-fetch
 const fetch = (...args) =>
   import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
-// load projectId & iteration
+// Load your Custom Vision config
 const { projectId, publishName } = JSON.parse(
   fs.readFileSync(path.join(__dirname, '../cv-config.json'))
 );
 
-// build the Custom Vision REST endpoint
+// Build the Custom Vision REST URL for raw-image calls
 const PRED_ENDPOINT =
   process.env.PREDICTION_ENDPOINT.replace(/\/$/, '') +
   `/customvision/v3.0/Prediction/${projectId}/classify/iterations/${publishName}/image`;
@@ -23,6 +23,7 @@ module.exports = async (req, res) => {
   }
 
   try {
+    // Vercel parses JSON for you
     const { imageBase64 } = req.body;
     const b64 = imageBase64.split(',')[1];
     const buffer = Buffer.from(b64, 'base64');
