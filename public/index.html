@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Yousuf CV Fireworks (Manual Capture)</title>
+  <style>
+    body,html { margin:0; padding:0; overflow:hidden; background:#000; display:flex; flex-direction:column; align-items:center; }
+    #banner {
+      position:fixed; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      font-family:sans-serif; font-size:5vw; color:#ff0;
+      text-shadow:0 0 10px #f00,0 0 20px #f00;
+      opacity:0; transition:opacity .3s; z-index:10;
+    }
+    #banner.visible { opacity:1; }
+    #cam {
+      margin-top:20px;
+      width:400px; border:2px solid #fff; border-radius:4px;
+    }
+    #fire {
+      position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1;
+    }
+    #controls {
+      margin: 10px;
+    }
+    #captureBtn {
+      padding:10px 20px; font-size:1rem; cursor:pointer;
+    }
+    .emoji {
+      position:fixed; top:0; font-size:1.5rem; pointer-events:none; z-index:9;
+      animation: fall 3s linear forwards;
+    }
+    @keyframes fall {
+      0% { transform: translateY(-2em); opacity:1; }
+      100% { transform: translateY(100vh); opacity:0; }
+    }
+    #debug {
+      position:absolute; bottom:10px; left:10px; color:#0f0; font-family:monospace; font-size:0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="banner">YOUSUF IS HERE</div>
+  <canvas id="fire"></canvas>
+  <video id="cam" autoplay muted playsinline></video>
+  <div id="controls">
+    <button id="captureBtn">Capture & Check</button>
+  </div>
+  <div id="debug">Awaiting capture…</div>
+
+  <script src="https://unpkg.com/fireworks-js@2.1.0/dist/index.umd.js"></script>
+  <script>
+    const video = document.getElementById('cam');
+    const banner = document.getElementById('banner');
+    const debug  = document.getElementById('debug');
+    const fw     = new Fireworks.default(document.getElementById('fire'));
+    const btn    = document.getElementById('captureBtn');
+
+    function rainSad(count=5){
+      for(let i=0;i<count;i++){
+        const e = document.createElement('div');
+        e.textContent='😢';
+        e.className='emoji';
+        e.style.left = Math.random()*100+'vw';
+        document.body.append(e);
+        setTimeout(()=>e.remove(),3000);
+      }
+    }
+
+    async function captureAndClassify(){
+      if(video.readyState<2) return alert('Camera not ready');
+      // grab frame
+      const c = document.createElement('canvas');
+      c.width  = video.videoWidth;
+      c.height = video.videoHeight;
+      c.getContext('2d').drawImage(video,0,0);
+      const img = c.toDataURL('image/jpeg');
+
+      debug.textContent = 'Processing…';
+      try {
+        const res = await fetch('/classify',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ imageBase64: img })
+        });
+        const data = await res.json();
+        console.log('API response:', data);
+        debug.textContent = `tag: ${data.tag}  prob: ${(data.probability*100).toFixed(1)}%`;
+
+        if(data.tag==='Yousuf' && data.probability>0.7){
+          banner.classList.add('visible');
+          fw.start();
+          setTimeout(()=>{
+            fw.stop();
+            banner.classList.remove('visible');
+          },3000);
+        } else {
+          rainSad(5);
+        }
+      } catch(e){
+        console.warn(e);
+        debug.textContent = 'Error: '+e;
+      }
+    }
+
+    navigator.mediaDevices.getUserMedia({video:true})
+      .then(stream=>video.srcObject=stream)
+      .catch(e=>console.error('Camera error',e));
+
+    btn.addEventListener('click', captureAndClassify);
+  </script>
+</body>
+</html>
