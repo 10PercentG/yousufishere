@@ -29,7 +29,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
   <script src="https://unpkg.com/fireworks-js@2.1.0/dist/index.umd.js"></script>
   <script>
-    const video = document.getElementById('cam'),
+    const video  = document.getElementById('cam'),
           banner = document.getElementById('banner'),
           debug  = document.getElementById('debug'),
           fw     = new Fireworks.default(document.getElementById('fire')),
@@ -37,22 +37,22 @@
 
     function rainSad(n=5){
       for(let i=0;i<n;i++){
-        const e=document.createElement('div');
-        e.textContent='😢';e.className='emoji';
-        e.style.left=Math.random()*100+'vw';
+        const e = document.createElement('div');
+        e.textContent='😢'; e.className='emoji';
+        e.style.left = Math.random()*100 + 'vw';
         document.body.append(e);
         setTimeout(()=>e.remove(),3000);
       }
     }
 
-    // SignalR client
-    fetch('/api/negotiate',{method:'POST'})
+    // Connect SignalR
+    fetch('/api/negotiate',{ method:'POST' })
       .then(r=>r.json())
       .then(cfg=>{
-        const conn=new signalR.HubConnectionBuilder()
-          .withUrl(cfg.url,{ accessTokenFactory:()=>cfg.accessToken })
+        const conn = new signalR.HubConnectionBuilder()
+          .withUrl(cfg.url, { accessTokenFactory: ()=>cfg.accessToken })
           .build();
-        conn.on('yousufHere',()=>{
+        conn.on('yousufHere', ()=>{
           banner.classList.add('visible');
           fw.start();
           setTimeout(()=>{fw.stop();banner.classList.remove('visible')},3000);
@@ -61,32 +61,37 @@
       }).catch(console.error);
 
     async function captureAndClassify(){
-      if(video.readyState<2){alert('Camera not ready');return;}
-      const c=document.createElement('canvas');
-      c.width=video.videoWidth;c.height=video.videoHeight;
+      if(video.readyState<2){ alert('Cam not ready'); return; }
+      const c = document.createElement('canvas');
+      c.width = video.videoWidth; c.height = video.videoHeight;
       c.getContext('2d').drawImage(video,0,0);
-      const img=c.toDataURL('image/jpeg');
-      debug.textContent='Processing…';
+      const img = c.toDataURL('image/jpeg');
+
+      debug.textContent = 'Processing…';
       try {
-        const res=await fetch('/api/classify',{method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({imageBase64:img})
+        const res = await fetch('/api/classify',{
+          method:'POST',
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify({ imageBase64: img })
         });
-        if(!res.ok){debug.textContent=`Error ${res.status}`;return;}
-        const {tag,probability}=await res.json();
-        debug.textContent=`tag:${tag} prob:${(probability*100).toFixed(1)}%`;
+        if(!res.ok){ debug.textContent = `Error ${res.status}`; return; }
+        const { tag, probability } = await res.json();
+        debug.textContent = `tag:${tag} prob:${(probability*100).toFixed(1)}%`;
         if(tag==='Yousuf'&&probability>0.7){
-          banner.classList.add('visible');fw.start();
+          banner.classList.add('visible');
+          fw.start();
           setTimeout(()=>{fw.stop();banner.classList.remove('visible')},3000);
         } else rainSad(5);
-      } catch(e){console.error(e);debug.textContent='Error';}
+      } catch(e){
+        console.error(e); debug.textContent='Error';
+      }
     }
 
     navigator.mediaDevices.getUserMedia({video:true})
       .then(s=>video.srcObject=s)
-      .catch(e=>{console.error(e);debug.textContent='Cam error';});
+      .catch(e=>{ console.error(e); debug.textContent='Cam error'; });
 
-    btn.addEventListener('click',captureAndClassify);
+    btn.addEventListener('click', captureAndClassify);
   </script>
 </body>
 </html>
