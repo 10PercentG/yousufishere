@@ -96,6 +96,24 @@
         debug.textContent = 'Camera not accessible';
       });
 
+    // Poll status every 3s
+    setInterval(async () => {
+      try {
+        const res = await fetch('/api/status');
+        const { yousufHere } = await res.json();
+        if (yousufHere) {
+          banner.classList.add('visible');
+          fw.start();
+          setTimeout(() => {
+            fw.stop();
+            banner.classList.remove('visible');
+          }, 3000);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }, 3000);
+
     async function captureAndClassify(){
       if (video.readyState < 2) { alert('Camera not ready'); return; }
       const c = document.createElement('canvas');
