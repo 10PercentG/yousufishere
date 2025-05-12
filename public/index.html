@@ -60,11 +60,17 @@
       pointer-events: none;
       z-index: 0;
     }
-    #debug {
-      margin-top: 10px;
-      color: #0f0;
-      font-family: monospace;
-      font-size: 1.1em;
+    .emoji {
+      position: fixed;
+      top: 0;
+      pointer-events: none;
+      font-size: 1.5rem;
+      z-index: 9;
+      animation: fall 3s linear forwards;
+    }
+    @keyframes fall {
+      0% { transform: translateY(-2em); opacity: 1; }
+      100% { transform: translateY(100vh); opacity: 0; }
     }
   </style>
 </head>
@@ -96,7 +102,17 @@
         debug.textContent = 'Camera not accessible';
       });
 
-    // Poll status every 3s
+    function rainSad(count = 5) {
+      for (let i = 0; i < count; i++) {
+        const e = document.createElement('div');
+        e.textContent = '😢';
+        e.className = 'emoji';
+        e.style.left = Math.random() * 100 + 'vw';
+        document.body.append(e);
+        setTimeout(() => e.remove(), 3000);
+      }
+    }
+
     setInterval(async () => {
       try {
         const res = await fetch('/api/status');
@@ -114,7 +130,7 @@
       }
     }, 3000);
 
-    async function captureAndClassify(){
+    async function captureAndClassify() {
       if (video.readyState < 2) { alert('Camera not ready'); return; }
       const c = document.createElement('canvas');
       c.width = video.videoWidth; c.height = video.videoHeight;
@@ -138,7 +154,7 @@
           fw.start();
           setTimeout(() => { fw.stop(); banner.classList.remove('visible'); }, 3000);
         } else {
-          alert('Not Detected');
+          rainSad(5);
         }
       } catch (e) {
         console.error(e);
