@@ -78,16 +78,6 @@
     #captureBtn {
       animation: buttonGlow 1.5s infinite;
     }
-    #score {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      font-size: 1.5em;
-      background-color: rgba(0, 0, 0, 0.5);
-      padding: 10px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #000;
-    }
   </style>
 </head>
 <body>
@@ -98,24 +88,21 @@
       <button id="captureBtn">Capture & Check</button>
     </div>
     <div id="debug">Awaiting capture…</div>
-    <div id="score">Score: 0</div>
   </div>
   <canvas id="fire"></canvas>
   <script src="https://unpkg.com/fireworks-js@2.1.0/dist/index.umd.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
   <script>
-    let score = 0;
-    const scoreDisplay = document.getElementById('score');
-
-    function updateScore() {
-      score++;
-      scoreDisplay.textContent = `Score: ${score}`;
-    }
-
-    // Update this to increment score on successful detection
-    document.getElementById('captureBtn').addEventListener('click', () => {
-      updateScore();
-    });
+    // Camera setup
+    const video = document.getElementById('cam');
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then((stream) => {
+        video.srcObject = stream;
+      })
+      .catch((err) => {
+        console.error('Camera error:', err);
+        document.getElementById('debug').textContent = 'Camera not accessible';
+      });
   </script>
 </body>
 </html>
