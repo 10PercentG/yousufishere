@@ -66,18 +66,6 @@
       font-family: monospace;
       font-size: 1.1em;
     }
-    /* New Animations */
-    @keyframes slideIn {
-      from { transform: translateY(-100px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    @keyframes buttonGlow {
-      0%, 100% { box-shadow: 0 0 5px #4CAF50; }
-      50% { box-shadow: 0 0 15px #4CAF50; }
-    }
-    #captureBtn {
-      animation: buttonGlow 1.5s infinite;
-    }
   </style>
 </head>
 <body>
@@ -91,18 +79,56 @@
   </div>
   <canvas id="fire"></canvas>
   <script src="https://unpkg.com/fireworks-js@2.1.0/dist/index.umd.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
   <script>
     // Camera setup
-    const video = document.getElementById('cam');
+    const video = document.getElementById('cam'),
+          banner = document.getElementById('banner'),
+          debug  = document.getElementById('debug'),
+          fw     = new Fireworks.default(document.getElementById('fire')),
+          btn    = document.getElementById('captureBtn');
+
     navigator.mediaDevices.getUserMedia({ video: true })
       .then((stream) => {
         video.srcObject = stream;
       })
       .catch((err) => {
         console.error('Camera error:', err);
-        document.getElementById('debug').textContent = 'Camera not accessible';
+        debug.textContent = 'Camera not accessible';
       });
+
+    async function captureAndClassify(){
+      if (video.readyState < 2) { alert('Camera not ready'); return; }
+      const c = document.createElement('canvas');
+      c.width = video.videoWidth; c.height = video.videoHeight;
+      c.getContext('2d').drawImage(video, 0, 0);
+      const img = c.toDataURL('image/jpeg');
+
+      debug.textContent = 'Processing…';
+      try {
+        const res = await fetch('/api/classify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: img })
+        });
+
+        if (!res.ok) { debug.textContent = `Error ${res.status}`; return; }
+        const { tag, probability } = await res.json();
+        debug.textContent = `tag: ${tag} prob: ${(probability * 100).toFixed(1)}%`;
+
+        if (tag === 'Yousuf' && probability > 0.7) {
+          banner.classList.add('visible');
+          fw.start();
+          setTimeout(() => { fw.stop(); banner.classList.remove('visible'); }, 3000);
+        } else {
+          alert('Not Detected');
+        }
+      } catch (e) {
+        console.error(e);
+        debug.textContent = 'Error';
+      }
+    }
+
+    btn.addEventListener('click', captureAndClassify);
   </script>
 </body>
 </html>
